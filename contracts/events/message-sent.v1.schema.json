@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://markettec.local/contracts/events/message-sent.v1.schema.json",
+  "title": "message.sent v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "eventType",
+    "schemaVersion",
+    "occurredAt",
+    "producer",
+    "correlationId",
+    "payload"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "message.sent" },
+    "schemaVersion": { "const": "1.0" },
+    "occurredAt": { "type": "integer", "minimum": 0 },
+    "producer": { "const": "ms-catalog" },
+    "correlationId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chatId",
+        "messageId",
+        "senderUserId",
+        "recipientUserId"
+      ],
+      "properties": {
+        "chatId": { "type": "string", "minLength": 1 },
+        "messageId": { "type": "string", "minLength": 1 },
+        "senderUserId": { "type": "string", "minLength": 1 },
+        "recipientUserId": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
+
