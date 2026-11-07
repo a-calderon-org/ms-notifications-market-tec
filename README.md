@@ -108,7 +108,6 @@ posteriormente, Key Vault/Managed Identity cuando corresponda.
 6. **MTEC-26:** SSE autenticado después de resolver el mecanismo compatible
    con navegador y APIM.
 
-La guía manual, paso a paso, se encuentra en
-[`docs/AZURE_MANUAL_GUIDE.md`](docs/AZURE_MANUAL_GUIDE.md). El archivo
-[`docs/AZURE_SETUP.md`](docs/AZURE_SETUP.md) conserva el historial técnico del
-primer intento de aprovisionamiento.
+La preparación vigente de App Service, WebJob, OIDC y verificación operativa de
+MTEC-27 está en
+[`docs/MTEC-27_AZURE_DEPLOYMENT.md`](docs/MTEC-27_AZURE_DEPLOYMENT.md).
