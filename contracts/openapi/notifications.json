@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "MarketTEC Notifications API",
-    "version": "0.2.0-draft",
-    "description": "Protected notification history and read-state API. Production authentication remains subject to MTEC-12 and MTEC-15."
+    "version": "0.3.0-draft",
+    "description": "Protected notification history, read-state and authenticated SSE API. Production authentication and APIM validation remain subject to MTEC-10, MTEC-12 and MTEC-15."
   },
   "paths": {
     "/v1/notifications": {
@@ -33,6 +33,32 @@
           "400": {"$ref": "#/components/responses/BadRequest"},
           "401": {"$ref": "#/components/responses/Unauthenticated"},
           "403": {"$ref": "#/components/responses/Forbidden"}
+        }
+      }
+    },
+    "/v1/notifications/stream": {
+      "get": {
+        "operationId": "streamNotifications",
+        "summary": "Stream notifications belonging to the authenticated user",
+        "description": "Use a fetch-based SSE client so the Bearer token remains in the Authorization header. Never place access tokens in the URL.",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/CorrelationId"},
+          {"$ref": "#/components/parameters/LastEventId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE notification, resync and heartbeat frames",
+            "headers": {
+              "X-Correlation-ID": {"$ref": "#/components/headers/CorrelationId"},
+              "Cache-Control": {"schema": {"type": "string"}}
+            },
+            "content": {"text/event-stream": {"schema": {"type": "string"}}}
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthenticated"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "429": {"$ref": "#/components/responses/TooManyConnections"}
         }
       }
     },
@@ -73,6 +99,12 @@
         "name": "X-Correlation-ID",
         "in": "header",
         "schema": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,128}$"}
+      },
+      "LastEventId": {
+        "name": "Last-Event-ID",
+        "in": "header",
+        "description": "UUID of the last notification completely processed by the client",
+        "schema": {"type": "string", "format": "uuid"}
       }
     },
     "headers": {
@@ -124,7 +156,8 @@
       "BadRequest": {"description": "Invalid parameters or cursor", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorEnvelope"}}}},
       "Unauthenticated": {"description": "Missing or invalid authentication", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorEnvelope"}}}},
       "Forbidden": {"description": "Principal lacks the required permission", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorEnvelope"}}}},
-      "NotFound": {"description": "Notification not visible to this principal", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorEnvelope"}}}}
+      "NotFound": {"description": "Notification not visible to this principal", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorEnvelope"}}}},
+      "TooManyConnections": {"description": "Per-user or service connection limit reached", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorEnvelope"}}}}
     }
   }
 }

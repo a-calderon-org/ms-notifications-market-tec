@@ -1,14 +1,19 @@
+import logging
+from collections.abc import AsyncIterator
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Path, Query, Request
 from pydantic import BaseModel
+from starlette.responses import StreamingResponse
 
 from ms_notifications.api.errors import APIProblem
+from ms_notifications.application.connection_limiter import RealtimeConnectionLimiter
 from ms_notifications.application.notification_history import (
     ListNotifications,
     MarkNotificationRead,
 )
+from ms_notifications.application.notification_stream import NotificationEventStream
 from ms_notifications.application.ports import (
     AuthenticatedPrincipal,
     AuthenticationError,
@@ -20,6 +25,7 @@ from ms_notifications.domain.models import Notification
 router = APIRouter(prefix="/v1/notifications", tags=["notifications"])
 READ_PERMISSION = "notifications:read"
 WRITE_PERMISSION = "notifications:write"
+LOGGER = logging.getLogger(__name__)
 
 
 class NotificationResponse(BaseModel):
@@ -74,6 +80,87 @@ def _require_permission(principal: AuthenticatedPrincipal, permission: str) -> N
             status_code=403,
             code="FORBIDDEN",
             message="The authenticated principal lacks the required permission",
+        )
+
+
+@router.get(
+    "/stream",
+    response_class=StreamingResponse,
+    responses={
+        200: {
+            "description": "Recipient-scoped Server-Sent Events stream",
+            "content": {"text/event-stream": {}},
+        }
+    },
+)
+async def stream_notifications(
+    request: Request,
+    principal: Annotated[AuthenticatedPrincipal, Depends(authenticated_principal)],
+    last_event_id: Annotated[
+        UUID | None,
+        Header(alias="Last-Event-ID"),
+    ] = None,
+) -> StreamingResponse:
+    _require_permission(principal, READ_PERMISSION)
+    limiter: RealtimeConnectionLimiter = request.app.state.sse_connection_limiter
+    if not await limiter.acquire(principal.user_id):
+        raise APIProblem(
+            status_code=429,
+            code="CONNECTION_LIMIT_REACHED",
+            message="The real-time connection limit has been reached",
+            headers={"Retry-After": "5"},
+        )
+    repository: NotificationRepository = request.app.state.repository
+    settings = request.app.state.settings
+    event_stream = NotificationEventStream(
+        repository=repository,
+        poll_interval_seconds=settings.sse_poll_interval_seconds,
+        heartbeat_interval_seconds=settings.sse_heartbeat_interval_seconds,
+        batch_size=settings.sse_batch_size,
+        max_connection_duration_seconds=settings.sse_max_connection_duration_seconds,
+    )
+    content = event_stream.events(
+        recipient_user_id=principal.user_id,
+        last_event_id=str(last_event_id) if last_event_id is not None else None,
+        is_disconnected=request.is_disconnected,
+    )
+    return StreamingResponse(
+        _instrumented_stream(
+            content,
+            limiter=limiter,
+            user_id=principal.user_id,
+            correlation_id=request.state.correlation_id,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+async def _instrumented_stream(
+    content: AsyncIterator[str],
+    limiter: RealtimeConnectionLimiter,
+    user_id: str,
+    correlation_id: str,
+) -> AsyncIterator[str]:
+    LOGGER.info(
+        "event=sse_connection_opened user_id=%s correlation_id=%s",
+        user_id,
+        correlation_id,
+    )
+    try:
+        async for frame in content:
+            yield frame
+    finally:
+        await content.aclose()
+        await limiter.release(user_id)
+        LOGGER.info(
+            "event=sse_connection_closed user_id=%s correlation_id=%s",
+            user_id,
+            correlation_id,
         )
 
 
