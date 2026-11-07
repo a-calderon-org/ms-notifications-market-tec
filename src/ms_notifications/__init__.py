@@ -1,0 +1,2 @@
+"""MarketTEC notifications microservice."""
+
