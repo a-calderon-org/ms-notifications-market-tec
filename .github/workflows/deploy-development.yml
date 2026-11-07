@@ -1,0 +1,79 @@
+name: Deploy development
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Confirm deployment to the protected development environment
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-development
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ inputs.deploy }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: development
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Validate
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+          python -m ruff check src tests
+          python -m pytest --cov=ms_notifications --cov-fail-under=80
+
+      - name: Build deployment package
+        run: |
+          mkdir -p deployment/.python_packages/lib/site-packages
+          cp -R src App_Data deployment/
+          cp requirements.txt startup.sh deployment/
+          python -m pip install \
+            --target deployment/.python_packages/lib/site-packages \
+            -r requirements.txt
+
+      - name: Log in to Azure with OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy API and continuous WebJob
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          package: deployment
+
+      - name: Verify liveness
+        shell: bash
+        run: |
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error \
+              "${{ vars.AZURE_WEBAPP_URL }}/health/live"; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
