@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from ms_notifications.api.errors import APIProblem
 from ms_notifications.api.notifications import router as notifications_router
+from ms_notifications.application.connection_limiter import RealtimeConnectionLimiter
 from ms_notifications.application.ports import Authenticator, NotificationRepository
 from ms_notifications.config import Settings, get_settings
 from ms_notifications.container import build_repository
@@ -63,6 +64,10 @@ def create_app(
     )
     application.state.settings = app_settings
     application.state.authenticator = authenticator or RejectAllAuthenticator()
+    application.state.sse_connection_limiter = RealtimeConnectionLimiter(
+        max_total=app_settings.sse_max_connections,
+        max_per_user=app_settings.sse_max_connections_per_user,
+    )
 
     @application.middleware("http")
     async def correlation_middleware(request: Request, call_next):

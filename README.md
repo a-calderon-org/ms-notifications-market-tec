@@ -95,7 +95,24 @@ posteriormente, Key Vault/Managed Identity cuando corresponda.
 | `QUEUE_VISIBILITY_TIMEOUT_SECONDS` | `30` | Tiempo antes de reintentar un fallo |
 | `QUEUE_MAX_DEQUEUE_COUNT` | `5` | Intentos antes de mover a poison |
 | `QUEUE_POLL_INTERVAL_SECONDS` | `5` | Espera cuando no hay mensajes |
+| `SSE_POLL_INTERVAL_SECONDS` | `2` | Frecuencia de consulta del stream |
+| `SSE_HEARTBEAT_INTERVAL_SECONDS` | `15` | Intervalo de keep-alive SSE |
+| `SSE_BATCH_SIZE` | `100` | Ventana máxima para reconexión |
+| `SSE_MAX_CONNECTIONS` | `100` | Límite de streams por instancia |
+| `SSE_MAX_CONNECTIONS_PER_USER` | `3` | Límite de streams por usuario |
+| `SSE_MAX_CONNECTION_DURATION_SECONDS` | `300` | Tiempo antes de reautenticar |
 | `LOG_LEVEL` | `INFO` | Nivel de logging |
+
+## Notificaciones web en tiempo real (MTEC-26)
+
+`GET /v1/notifications/stream` entrega SSE protegido con el principal y permiso
+`notifications:read` de la API de historial. El cliente usa `fetch` streaming
+con `Authorization`; no envía tokens en la URL ni usa `EventSource` nativo
+mientras la autenticación sea Bearer.
+
+El endpoint admite `Last-Event-ID`, heartbeats, resincronización y límites de
+conexiones. La decisión y las pruebas pendientes con Angular/APIM están en
+[`docs/MTEC-26_REALTIME_SSE.md`](docs/MTEC-26_REALTIME_SSE.md).
 
 ## Ruta de implementación
 

@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     queue_visibility_timeout_seconds: int = Field(default=30, ge=1, le=604800)
     queue_max_dequeue_count: int = Field(default=5, ge=1)
     queue_poll_interval_seconds: float = Field(default=5, gt=0)
+    sse_poll_interval_seconds: float = Field(default=2, gt=0)
+    sse_heartbeat_interval_seconds: float = Field(default=15, gt=0)
+    sse_batch_size: int = Field(default=100, ge=1, le=500)
+    sse_max_connections: int = Field(default=100, ge=1)
+    sse_max_connections_per_user: int = Field(default=3, ge=1)
+    sse_max_connection_duration_seconds: float = Field(default=300, gt=0)
 
 
 @lru_cache
