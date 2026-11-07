@@ -34,3 +34,17 @@ python -m pytest
 ```
 
 El archivo `.env` y cualquier secreto real están excluidos de Git.
+
+## Persistencia Mongo/DocumentDB
+
+Para usar MongoDB local o Azure DocumentDB compatible con MongoDB:
+
+```dotenv
+NOTIFICATIONS_REPOSITORY=mongo
+MONGODB_URI=<cadena-secreta-solo-en-.env>
+MONGODB_DATABASE=market_tec_notifications
+MONGODB_COLLECTION=notifications
+```
+
+El adaptador crea un índice único por `(recipientUserId, eventId)` para
+idempotencia. `compose.yaml` permite iniciar MongoDB local para desarrollo.

@@ -14,7 +14,10 @@ class Settings(BaseSettings):
     app_name: str = "ms-notifications"
     app_env: str = "development"
     log_level: str = "INFO"
-    notifications_repository: Literal["memory"] = "memory"
+    notifications_repository: Literal["memory", "mongo"] = "memory"
+    mongodb_uri: str = ""
+    mongodb_database: str = "market_tec_notifications"
+    mongodb_collection: str = "notifications"
 
 
 @lru_cache
