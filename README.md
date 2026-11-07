@@ -48,3 +48,16 @@ MONGODB_COLLECTION=notifications
 
 El adaptador crea un índice único por `(recipientUserId, eventId)` para
 idempotencia. `compose.yaml` permite iniciar MongoDB local para desarrollo.
+
+## Consumidor Azure Queue
+
+El worker independiente consume `message-sent-v1`, reintenta fallos transitorios
+y mueve mensajes permanentes a `message-sent-v1-poison`.
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+python -m ms_notifications.worker
+```
+
+La política de serialización, apagado y replay manual está documentada en
+[`docs/MTEC-24_QUEUE_OPERATIONS.md`](docs/MTEC-24_QUEUE_OPERATIONS.md).

@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from ms_notifications.domain.errors import InvalidEventError
+from ms_notifications.domain.errors import InvalidEventError, UnsupportedEventVersionError
 
 
 def _required_string(value: Any, field: str) -> str:
@@ -60,7 +60,7 @@ class MessageSentEvent:
         if raw.get("eventType") != "message.sent":
             raise InvalidEventError("eventType must be message.sent")
         if raw.get("schemaVersion") != "1.0":
-            raise InvalidEventError("schemaVersion must be 1.0")
+            raise UnsupportedEventVersionError("schemaVersion must be 1.0")
         if raw.get("producer") != "ms-catalog":
             raise InvalidEventError("producer must be ms-catalog")
 

@@ -8,6 +8,7 @@ from ms_notifications.domain.models import MessageSentEvent, Notification
 @dataclass(frozen=True, slots=True)
 class ProcessEventResult:
     event_id: str
+    correlation_id: str
     created: bool
 
 
@@ -19,5 +20,9 @@ class ProcessMessageSent:
         event = MessageSentEvent.from_dict(raw_event)
         notification = Notification.from_event(event)
         created = self._repository.save_if_absent(notification)
-        return ProcessEventResult(event_id=event.event_id, created=created)
+        return ProcessEventResult(
+            event_id=event.event_id,
+            correlation_id=event.correlation_id,
+            created=created,
+        )
 
