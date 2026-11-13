@@ -103,6 +103,31 @@ posteriormente, Key Vault/Managed Identity cuando corresponda.
 | `SSE_MAX_CONNECTION_DURATION_SECONDS` | `300` | Tiempo antes de reautenticar |
 | `LOG_LEVEL` | `INFO` | Nivel de logging |
 
+## Autenticación JWT interna
+
+La aplicación permanece cerrada por defecto con
+`AUTHENTICATION_MODE=reject_all`. Para habilitar el contrato interno MarketTec se
+deben configurar conjuntamente:
+
+| Variable | Uso |
+|---|---|
+| `AUTHENTICATION_MODE=jwt` | Activa la validación defensiva en FastAPI |
+| `JWT_ISSUER` | Emisor exacto aprobado para el entorno |
+| `JWT_AUDIENCE` | Audiencia exacta de `ms-notifications`/gateway |
+| `JWT_JWKS_URL` | Endpoint HTTPS fijo que publica las claves públicas |
+| `JWT_MAX_TTL_SECONDS` | Máximo contractual; no puede superar 240 |
+
+El backend exige firma RS256, encabezados `typ=at+jwt` y `kid`, y claims
+`iss`, `aud`, `sub`, `sid`, `iat`, `exp` y `jti`. `sub` es el `userId` interno.
+Los permisos se obtienen de `scope`, `scp` o `scopes`; si faltan, el token se
+autentica pero no obtiene acceso a los endpoints. No se confía en headers de
+identidad añadidos por el navegador o por APIM.
+
+El paquete de producción de `ms-users` documenta actualmente issuer
+`https://markettec-api.azure-api.net/users-prod` y audience `markettec-api`.
+La URL JWKS debe confirmarse operativamente: no activar `jwt` mientras el endpoint
+configurado no responda por HTTPS con el `kid` activo.
+
 ## Notificaciones web en tiempo real (MTEC-26)
 
 `GET /v1/notifications/stream` entrega SSE protegido con el principal y permiso

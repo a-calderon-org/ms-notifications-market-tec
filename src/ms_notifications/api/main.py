@@ -13,7 +13,7 @@ from ms_notifications.application.connection_limiter import RealtimeConnectionLi
 from ms_notifications.application.ports import Authenticator, NotificationRepository
 from ms_notifications.config import Settings, get_settings
 from ms_notifications.container import build_repository
-from ms_notifications.infrastructure.auth import RejectAllAuthenticator
+from ms_notifications.infrastructure.auth import build_authenticator
 
 router = APIRouter()
 
@@ -63,7 +63,7 @@ def create_app(
         lifespan=lifespan,
     )
     application.state.settings = app_settings
-    application.state.authenticator = authenticator or RejectAllAuthenticator()
+    application.state.authenticator = authenticator or build_authenticator(app_settings)
     application.state.sse_connection_limiter = RealtimeConnectionLimiter(
         max_total=app_settings.sse_max_connections,
         max_per_user=app_settings.sse_max_connections_per_user,

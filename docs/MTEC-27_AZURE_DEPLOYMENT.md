@@ -61,6 +61,13 @@ Agregar en Environment variables, sin espacios adicionales:
 | `MONGODB_URI` | referencia Key Vault a `mongodb-uri` |
 | `MONGODB_DATABASE` | `market_tec_notifications` |
 | `MONGODB_COLLECTION` | `notifications` |
+| `AUTHENTICATION_MODE` | `jwt` solo después de verificar issuer/audience/JWKS |
+| `JWT_ISSUER` | issuer exacto del entorno de ms-users |
+| `JWT_AUDIENCE` | audiencia exacta aprobada para el gateway |
+| `JWT_JWKS_URL` | endpoint HTTPS fijo de claves públicas |
+| `JWT_MAX_TTL_SECONDS` | `240` |
+| `JWT_JWKS_TIMEOUT_SECONDS` | `5` |
+| `JWT_JWKS_CACHE_SECONDS` | `300` |
 | `AZURE_STORAGE_QUEUE_ENDPOINT` | `https://stmtecnotifdevcc.queue.core.windows.net` |
 | `AZURE_QUEUE_NAME` | `message-sent-v1` |
 | `AZURE_POISON_QUEUE_NAME` | `message-sent-v1-poison` |
