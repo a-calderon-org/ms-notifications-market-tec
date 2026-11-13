@@ -78,7 +78,7 @@ def test_valid_message_is_saved_deleted_and_correlated(valid_event, caplog):
     assert repository.count() == 1
     assert source.deleted == [message]
     assert poison.sent == []
-    assert "correlation_id=corr-001" in caplog.text
+    assert "correlation_id=5f0b7a52-3c1e-4c55-9d8e-2b6f3f1a9c10" in caplog.text
     assert "event=queue_message_processed" in caplog.text
 
 
@@ -140,7 +140,7 @@ def test_transient_failure_moves_to_poison_at_limit(valid_event):
     ("content", "category"),
     [
         ("not-json", "invalid_json"),
-        (json.dumps({"schemaVersion": "1.0"}), "invalid_message"),
+        (json.dumps({"eventType": "message.sent", "schemaVersion": 1}), "invalid_message"),
     ],
 )
 def test_permanent_failure_moves_immediately_to_poison(content, category, caplog):
@@ -157,7 +157,7 @@ def test_permanent_failure_moves_immediately_to_poison(content, category, caplog
 
 
 def test_unsupported_version_is_distinguished(valid_event, caplog):
-    valid_event["schemaVersion"] = "2.0"
+    valid_event["schemaVersion"] = 2
     content = json.dumps(valid_event)
     message = queue_message(content)
     worker, source, poison, _ = build_worker([message])
@@ -168,7 +168,7 @@ def test_unsupported_version_is_distinguished(valid_event, caplog):
     assert poison.sent == [content]
     assert source.deleted == [message]
     assert "category=unsupported_version" in caplog.text
-    assert "correlation_id=corr-001" in caplog.text
+    assert "correlation_id=5f0b7a52-3c1e-4c55-9d8e-2b6f3f1a9c10" in caplog.text
 
 
 def test_oversized_message_is_rejected_without_logging_payload(caplog):

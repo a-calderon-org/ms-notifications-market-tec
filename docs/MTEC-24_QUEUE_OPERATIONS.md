@@ -31,7 +31,7 @@ renovación mediante `update_message` antes de desplegar ese cambio.
 | Categoría | Ejemplos | Acción |
 |---|---|---|
 | Permanente | JSON inválido, contrato inválido, más de 64 KiB | Poison inmediato |
-| Versión desconocida | `schemaVersion` distinta de `1.0` | Poison inmediato con categoría propia |
+| Versión desconocida | `schemaVersion` entero distinto de `1` | Poison inmediato con categoría propia, sin aplicar el esquema v1 |
 | Transitorio | DocumentDB temporalmente no disponible | Reintentar al vencer visibility timeout |
 | Infraestructura Queue | Fallo de receive/send/delete | Mantener vivo el worker y reintentar el ciclo |
 
