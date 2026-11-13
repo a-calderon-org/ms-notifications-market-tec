@@ -6,9 +6,12 @@ revisarse antes de crearlos en la suscripción Azure for Students.
 
 ## Estado y límites actuales
 
-- Ya existen `cosmos-mtec-notif` y `stmtecnotifdevcc` en Canada Central.
-- Todavía no existen App Service Plan, Web App, Key Vault ni Application
-  Insights en `rg-markettec-notifications-dev-cc`.
+- Ya existen `cosmos-mtec-notif`, `stmtecnotifdevcc`, el App Service
+  `app-mtec-notifications-dev-cc`, Key Vault y Application Insights en Canada
+  Central.
+- El APIM compartido `markettec-api` usa el nivel Consumption en West US 2. La
+  API REST puede usarlo, pero ese nivel no admite SSE de larga duración ni
+  integración de salida con una red virtual.
 - La API usa `startup.sh`; el worker se despliega como WebJob continuo bajo
   `App_Data/jobs/continuous/notifications-worker/run.py`.
 - Un WebJob continuo confiable requiere **Always On**, disponible desde Basic.
@@ -32,9 +35,12 @@ En el grupo `rg-markettec-notifications-dev-cc`, región Canada Central:
 6. Asignar a la identidad de la Web App:
    - `Storage Queue Data Contributor` sobre `stmtecnotifdevcc`.
    - `Key Vault Secrets User` sobre el Key Vault.
-7. En la Web App, copiar **Outbound IP addresses**. Agregar solamente esas IP
-   al firewall de DocumentDB y, si Storage restringe redes, al Storage Account.
-   La identidad administrada autoriza, pero no atraviesa un firewall cerrado.
+7. En la Web App, copiar **Outbound IP addresses** y agregar solamente esas IP
+   al firewall de DocumentDB. Para Storage en la misma región, integrar la Web
+   App con una subred delegada a `Microsoft.Web/serverFarms`, habilitar el
+   service endpoint `Microsoft.Storage` y autorizar esa subred en Storage. Las
+   reglas IP de Storage no se aplican al tráfico de servicios Azure de la misma
+   región.
 8. En Configuration > General settings:
    - Startup Command: `bash startup.sh`.
    - Always On: `On`.
@@ -67,6 +73,11 @@ Agregar en Environment variables, sin espacios adicionales:
 
 La referencia Key Vault tiene la forma que genera el selector del portal. No
 copiar el valor real del secreto a la configuración visible o al workflow.
+
+El paquete instala dependencias en `.python_packages/lib/site-packages`.
+`startup.sh` y el WebJob agregan esa ruta de forma explícita a `PYTHONPATH`, por
+lo que el Startup Command debe permanecer como `bash startup.sh`. No es
+necesario mantener una terminal local abierta.
 
 ## 3. Preparar GitHub OIDC
 
@@ -109,13 +120,21 @@ No usar publish profile. El workflow `Deploy development` solo aparece como
 Esta etapa queda pendiente de MTEC-12 y no debe improvisarse desde este ticket.
 Cuando exista una decisión aprobada:
 
-1. Importar el OpenAPI del commit revisado.
+1. Importar `contracts/openapi/notifications.json`, publicado como OpenAPI
+   `3.0.3` por compatibilidad con APIM, en una API independiente con sufijo
+   `notifications` y backend HTTPS apuntando al App Service.
 2. Aplicar validación real de issuer, audience, firma, expiración y permisos.
 3. Eliminar headers de identidad proporcionados por el cliente.
 4. Probar token válido, ausente, expirado, firma/audience incorrectos y acceso
    directo al hostname de App Service.
 5. Restringir el origen solo después de verificar un mecanismo APIM→backend
    compatible con el nivel realmente contratado.
+
+Una solicitud sin token que atraviese APIM debe devolver el `401
+UNAUTHENTICATED` estructurado por FastAPI. Esto demuestra enrutamiento, pero no
+completa la seguridad. El nivel Consumption no puede alcanzar un backend
+privado mediante integración VNet; el backend debe validar el JWT o usar otro
+mecanismo autenticado antes de intentar bloquear el acceso directo.
 
 No marcar MTEC-27 Done solamente porque la URL de App Service responde.
 
