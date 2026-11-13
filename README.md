@@ -10,7 +10,9 @@ crea una sola notificación por `eventId`, aunque el evento sea reprocesado.
 - Arquitectura hexagonal: dominio y aplicación no dependen de Azure.
 - Persistencia en memoria para desarrollo inmediato.
 - Adaptador MongoDB compatible con Azure Cosmos DB for MongoDB.
-- Contrato JSON Schema provisional para `message.sent.v1`.
+- Contrato `message.sent.v1` sincronizado con `a-calderon-org/market_tec` (`contracts/events/`,
+  borrador compartido con ms-catalog): `schemaVersion` entero `1`, `correlationId` UUID,
+  `sentAt` y `publicationId` obligatorios y `messagePreview` opcional (no se persiste).
 - Pruebas de procesamiento correcto, deduplicación y eventos inválidos.
 
 > Los tickets de Jira mencionan Azure Table Storage para MTEC-23. Usar Cosmos
