@@ -11,7 +11,7 @@ def test_notifications_contract_is_valid_json_and_matches_routes():
     contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
     generated = create_app(Settings(notifications_repository="memory")).openapi()
 
-    assert contract["openapi"] == "3.1.0"
+    assert contract["openapi"] == "3.0.3"
     assert contract["info"]["version"] == "0.3.0-draft"
     assert "/v1/notifications" in generated["paths"]
     assert "/v1/notifications/stream" in generated["paths"]

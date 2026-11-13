@@ -40,8 +40,9 @@ Abrí:
 - `http://localhost:8000/health/ready`
 - `http://localhost:8000/docs`
 
-Los endpoints `/v1/notifications` están cerrados por defecto hasta integrar el
-autenticador aprobado por MTEC-12/MTEC-15. El contrato y la guía de MTEC-25 están
+Los endpoints `/v1/notifications` están cerrados por defecto
+(`AUTHENTICATION_MODE=reject_all`) hasta configurar el JWT interno MarketTec
+descrito en [Autenticación JWT interna](#autenticación-jwt-interna). El contrato y la guía de MTEC-25 están
 en [`docs/MTEC-25_NOTIFICATIONS_API.md`](docs/MTEC-25_NOTIFICATIONS_API.md).
 
 Para ejecutar las pruebas:
@@ -104,6 +105,36 @@ posteriormente, Key Vault/Managed Identity cuando corresponda.
 | `SSE_MAX_CONNECTIONS_PER_USER` | `3` | Límite de streams por usuario |
 | `SSE_MAX_CONNECTION_DURATION_SECONDS` | `300` | Tiempo antes de reautenticar |
 | `LOG_LEVEL` | `INFO` | Nivel de logging |
+
+## Autenticación JWT interna
+
+La aplicación permanece cerrada por defecto con
+`AUTHENTICATION_MODE=reject_all`. Para habilitar el contrato interno MarketTec se
+deben configurar conjuntamente:
+
+| Variable | Uso |
+|---|---|
+| `AUTHENTICATION_MODE=jwt` | Activa la validación defensiva en FastAPI |
+| `JWT_ISSUER` | Emisor exacto aprobado para el entorno |
+| `JWT_AUDIENCE` | Audiencia exacta de `ms-notifications`/gateway |
+| `JWT_JWKS_URL` o `JWT_JWKS_JSON` | Endpoint HTTPS o snapshot público revisado; configurar exactamente uno |
+| `JWT_DEFAULT_PERMISSIONS` | Capacidades propias concedidas a todo JWT MarketTec válido; por defecto lectura/escritura de recursos propios |
+| `JWT_MAX_TTL_SECONDS` | Máximo contractual; no puede superar 240 |
+
+El backend exige firma RS256, encabezados `typ=at+jwt` y `kid`, y claims
+`iss`, `aud`, `sub`, `sid`, `iat`, `exp` y `jti`. `sub` es el `userId` interno.
+Los JWT actuales de ms-users no incluyen scopes. Por eso, el despliegue concede
+explícitamente `notifications:read notifications:write` a cualquier principal
+MarketTec válido, siempre limitado por `sub` a sus propios recursos. Si aparecen
+`scope`, `scp` o `scopes`, se combinan con esa política. No se confía en headers
+de identidad añadidos por el navegador o por APIM.
+
+El paquete de producción de `ms-users` documenta actualmente issuer
+`https://markettec-api.azure-api.net/users-prod` y audience `markettec-api`.
+La operación JWKS de APIM responde actualmente `404 OPERATION_NOT_RELEASED`. Hasta
+liberarla, usar `JWT_JWKS_JSON` con el mismo snapshot público revisado que utiliza
+APIM y guardarlo en configuración externa; rotarlo de forma coordinada antes de
+retirar un `kid`.
 
 ## Notificaciones web en tiempo real (MTEC-26)
 

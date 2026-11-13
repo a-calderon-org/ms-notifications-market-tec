@@ -10,7 +10,8 @@
 | Endpoints FastAPI | Implementado | pruebas HTTP de 200/400/401/403/404 |
 | OpenAPI | Implementado como borrador local | `contracts/openapi/notifications.json` |
 | Autenticación en pruebas | Simulada | `FakeAuthenticator` existe únicamente en tests |
-| JWT/APIM productivo | Pendiente externo | MTEC-12 y MTEC-15 |
+| JWT interno en backend | Implementado | `JWTAuthenticator`; se activa con `AUTHENTICATION_MODE=jwt` (MTEC-27) |
+| JWT/APIM en Azure | Pendiente | variables de App Service, API APIM y pruebas E2E (MTEC-27) |
 
 La aplicación usa `RejectAllAuthenticator` por defecto. Por lo tanto, ningún
 token falso o header de identidad habilita los endpoints al ejecutar el servicio
@@ -72,7 +73,8 @@ python -m ruff check src tests
 
 No exponer estos endpoints en un ambiente compartido o productivo hasta que:
 
-1. MTEC-12/MTEC-15 definan issuer, audience, firma, expiración y permisos.
+1. App Service tenga issuer, audience y JWKS del JWT interno de ms-users
+   (patrón aprobado en MTEC-12; configuración en MTEC-27).
 2. APIM elimine headers de identidad entrantes no confiables.
 3. El backend valide o reciba de forma demostrablemente confiable el principal.
 4. Se prueben tokens inválidos, expirados, audiencia/firma incorrecta y bypass.
