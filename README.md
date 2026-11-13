@@ -114,19 +114,24 @@ deben configurar conjuntamente:
 | `AUTHENTICATION_MODE=jwt` | Activa la validación defensiva en FastAPI |
 | `JWT_ISSUER` | Emisor exacto aprobado para el entorno |
 | `JWT_AUDIENCE` | Audiencia exacta de `ms-notifications`/gateway |
-| `JWT_JWKS_URL` | Endpoint HTTPS fijo que publica las claves públicas |
+| `JWT_JWKS_URL` o `JWT_JWKS_JSON` | Endpoint HTTPS o snapshot público revisado; configurar exactamente uno |
+| `JWT_DEFAULT_PERMISSIONS` | Capacidades propias concedidas a todo JWT MarketTec válido; por defecto lectura/escritura de recursos propios |
 | `JWT_MAX_TTL_SECONDS` | Máximo contractual; no puede superar 240 |
 
 El backend exige firma RS256, encabezados `typ=at+jwt` y `kid`, y claims
 `iss`, `aud`, `sub`, `sid`, `iat`, `exp` y `jti`. `sub` es el `userId` interno.
-Los permisos se obtienen de `scope`, `scp` o `scopes`; si faltan, el token se
-autentica pero no obtiene acceso a los endpoints. No se confía en headers de
-identidad añadidos por el navegador o por APIM.
+Los JWT actuales de ms-users no incluyen scopes. Por eso, el despliegue concede
+explícitamente `notifications:read notifications:write` a cualquier principal
+MarketTec válido, siempre limitado por `sub` a sus propios recursos. Si aparecen
+`scope`, `scp` o `scopes`, se combinan con esa política. No se confía en headers
+de identidad añadidos por el navegador o por APIM.
 
 El paquete de producción de `ms-users` documenta actualmente issuer
 `https://markettec-api.azure-api.net/users-prod` y audience `markettec-api`.
-La URL JWKS debe confirmarse operativamente: no activar `jwt` mientras el endpoint
-configurado no responda por HTTPS con el `kid` activo.
+La operación JWKS de APIM responde actualmente `404 OPERATION_NOT_RELEASED`. Hasta
+liberarla, usar `JWT_JWKS_JSON` con el mismo snapshot público revisado que utiliza
+APIM y guardarlo en configuración externa; rotarlo de forma coordinada antes de
+retirar un `kid`.
 
 ## Notificaciones web en tiempo real (MTEC-26)
 

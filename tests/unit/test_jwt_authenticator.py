@@ -1,3 +1,4 @@
+import json
 from time import time
 
 import jwt
@@ -125,6 +126,56 @@ def test_list_and_space_separated_scope_claims_are_combined():
     assert principal.permissions == frozenset(
         {"notifications:read", "notifications:write", "notifications:stream"}
     )
+
+
+def test_explicit_default_permissions_support_current_scope_less_tokens():
+    verifier = JWTAuthenticator(
+        issuer=ISSUER,
+        audience=AUDIENCE,
+        jwks_url="https://identity.example.test/.well-known/jwks.json",
+        default_permissions=frozenset({"notifications:read", "notifications:write"}),
+        signing_key_provider=StaticSigningKeyProvider(),
+    )
+
+    principal = verifier.authenticate(f"Bearer {token(include_scope=False)}")
+
+    assert principal.permissions == frozenset(
+        {"notifications:read", "notifications:write"}
+    )
+
+
+def test_reviewed_static_public_jwks_can_validate_tokens():
+    public_jwk = jwt.algorithms.RSAAlgorithm.to_jwk(PUBLIC_KEY, as_dict=True)
+    public_jwk.update({"kid": "prod-jwt-2026-11", "alg": "RS256", "use": "sig"})
+    verifier = JWTAuthenticator(
+        issuer=ISSUER,
+        audience=AUDIENCE,
+        jwks_json=json.dumps({"keys": [public_jwk]}),
+    )
+
+    principal = verifier.authenticate(f"Bearer {token()}")
+
+    assert principal.user_id == "user-recipient"
+
+
+def test_static_jwks_rejects_private_material_and_duplicate_kids():
+    public_jwk = jwt.algorithms.RSAAlgorithm.to_jwk(PUBLIC_KEY, as_dict=True)
+    public_jwk.update({"kid": "duplicate", "alg": "RS256", "use": "sig"})
+    private_jwk = jwt.algorithms.RSAAlgorithm.to_jwk(PRIVATE_KEY, as_dict=True)
+    private_jwk.update({"kid": "private", "alg": "RS256", "use": "sig"})
+
+    with pytest.raises(ValueError, match="private key"):
+        JWTAuthenticator(
+            issuer=ISSUER,
+            audience=AUDIENCE,
+            jwks_json=json.dumps({"keys": [private_jwk]}),
+        )
+    with pytest.raises(ValueError, match="unique"):
+        JWTAuthenticator(
+            issuer=ISSUER,
+            audience=AUDIENCE,
+            jwks_json=json.dumps({"keys": [public_jwk, public_jwk]}),
+        )
 
 
 def test_jwks_url_must_be_https():

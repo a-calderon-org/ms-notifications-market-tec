@@ -65,6 +65,8 @@ Agregar en Environment variables, sin espacios adicionales:
 | `JWT_ISSUER` | issuer exacto del entorno de ms-users |
 | `JWT_AUDIENCE` | audiencia exacta aprobada para el gateway |
 | `JWT_JWKS_URL` | endpoint HTTPS fijo de claves públicas |
+| `JWT_JWKS_JSON` | alternativa temporal: snapshot público revisado; usar exactamente uno de URL/JSON |
+| `JWT_DEFAULT_PERMISSIONS` | `notifications:read notifications:write` para recursos propios derivados de `sub` |
 | `JWT_MAX_TTL_SECONDS` | `240` |
 | `JWT_JWKS_TIMEOUT_SECONDS` | `5` |
 | `JWT_JWKS_CACHE_SECONDS` | `300` |

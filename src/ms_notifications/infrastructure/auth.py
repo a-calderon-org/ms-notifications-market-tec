@@ -1,3 +1,4 @@
+import json
 from collections.abc import Mapping
 from typing import Any, Protocol
 
@@ -22,6 +23,43 @@ class SigningKeyProvider(Protocol):
         """Return a trusted signing key selected from the configured JWKS."""
 
 
+class StaticJWKSetProvider:
+    """Select public RSA signing keys from a reviewed, provisioned JWKS snapshot."""
+
+    _PRIVATE_JWK_FIELDS = frozenset({"d", "p", "q", "dp", "dq", "qi", "oth", "k"})
+
+    def __init__(self, jwks_json: str) -> None:
+        try:
+            document = json.loads(jwks_json)
+        except json.JSONDecodeError as exc:
+            raise ValueError("JWT_JWKS_JSON must be valid JSON") from exc
+        keys = document.get("keys") if isinstance(document, dict) else None
+        if not isinstance(keys, list) or not keys:
+            raise ValueError("JWT_JWKS_JSON must contain a non-empty keys array")
+
+        self._keys: dict[str, Any] = {}
+        for value in keys:
+            if not isinstance(value, dict):
+                raise ValueError("each JWK must be an object")
+            if self._PRIVATE_JWK_FIELDS.intersection(value):
+                raise ValueError("JWT_JWKS_JSON must not contain private key material")
+            kid = value.get("kid")
+            if not isinstance(kid, str) or not kid or kid in self._keys:
+                raise ValueError("every JWK must have a unique non-empty kid")
+            if value.get("kty") != "RSA" or value.get("alg") != "RS256":
+                raise ValueError("only RSA/RS256 JWKs are accepted")
+            if value.get("use") not in (None, "sig"):
+                raise ValueError("JWK use must be sig")
+            self._keys[kid] = jwt.PyJWK.from_dict(value, algorithm="RS256")
+
+    def get_signing_key_from_jwt(self, token: str) -> Any:
+        kid = jwt.get_unverified_header(token).get("kid")
+        try:
+            return self._keys[kid]
+        except (KeyError, TypeError) as exc:
+            raise PyJWKClientError("JWT kid is not present in the provisioned JWKS") from exc
+
+
 class JWTAuthenticator:
     """Validate the internal MarketTec access-token profile defensively."""
 
@@ -30,26 +68,36 @@ class JWTAuthenticator:
         *,
         issuer: str,
         audience: str,
-        jwks_url: str,
+        jwks_url: str = "",
+        jwks_json: str = "",
+        default_permissions: frozenset[str] = frozenset(),
         max_ttl_seconds: int = 240,
         jwks_timeout_seconds: int = 5,
         jwks_cache_seconds: int = 300,
         signing_key_provider: SigningKeyProvider | None = None,
     ) -> None:
-        if not issuer or not audience or not jwks_url:
-            raise ValueError("JWT_ISSUER, JWT_AUDIENCE and JWT_JWKS_URL are required")
-        if not jwks_url.startswith("https://"):
-            raise ValueError("JWT_JWKS_URL must use HTTPS")
+        if not issuer or not audience:
+            raise ValueError("JWT_ISSUER and JWT_AUDIENCE are required")
         self._issuer = issuer
         self._audience = audience
         self._max_ttl_seconds = max_ttl_seconds
-        self._signing_keys = signing_key_provider or PyJWKClient(
-            jwks_url,
-            cache_jwk_set=True,
-            lifespan=jwks_cache_seconds,
-            cache_keys=True,
-            timeout=jwks_timeout_seconds,
-        )
+        self._default_permissions = default_permissions
+        if signing_key_provider is not None:
+            self._signing_keys = signing_key_provider
+        elif bool(jwks_url) == bool(jwks_json):
+            raise ValueError("configure exactly one of JWT_JWKS_URL or JWT_JWKS_JSON")
+        elif jwks_url:
+            if not jwks_url.startswith("https://"):
+                raise ValueError("JWT_JWKS_URL must use HTTPS")
+            self._signing_keys = PyJWKClient(
+                jwks_url,
+                cache_jwk_set=True,
+                lifespan=jwks_cache_seconds,
+                cache_keys=True,
+                timeout=jwks_timeout_seconds,
+            )
+        else:
+            self._signing_keys = StaticJWKSetProvider(jwks_json)
 
     def authenticate(self, authorization: str | None) -> AuthenticatedPrincipal:
         token = self._bearer_token(authorization)
@@ -83,7 +131,7 @@ class JWTAuthenticator:
 
         return AuthenticatedPrincipal(
             user_id=claims["sub"],
-            permissions=self._permissions(claims),
+            permissions=self._default_permissions.union(self._permissions(claims)),
         )
 
     @staticmethod
@@ -138,6 +186,8 @@ def build_authenticator(settings: Settings):
             issuer=settings.jwt_issuer,
             audience=settings.jwt_audience,
             jwks_url=settings.jwt_jwks_url,
+            jwks_json=settings.jwt_jwks_json,
+            default_permissions=frozenset(settings.jwt_default_permissions.split()),
             max_ttl_seconds=settings.jwt_max_ttl_seconds,
             jwks_timeout_seconds=settings.jwt_jwks_timeout_seconds,
             jwks_cache_seconds=settings.jwt_jwks_cache_seconds,

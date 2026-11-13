@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     jwt_issuer: str = ""
     jwt_audience: str = ""
     jwt_jwks_url: str = ""
+    jwt_jwks_json: str = ""
+    jwt_default_permissions: str = "notifications:read notifications:write"
     jwt_max_ttl_seconds: int = Field(default=240, ge=1, le=240)
     jwt_jwks_timeout_seconds: int = Field(default=5, ge=1, le=30)
     jwt_jwks_cache_seconds: int = Field(default=300, ge=1, le=3600)
