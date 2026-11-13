@@ -38,8 +38,9 @@ Abrí:
 - `http://localhost:8000/health/ready`
 - `http://localhost:8000/docs`
 
-Los endpoints `/v1/notifications` están cerrados por defecto hasta integrar el
-autenticador aprobado por MTEC-12/MTEC-15. El contrato y la guía de MTEC-25 están
+Los endpoints `/v1/notifications` están cerrados por defecto
+(`AUTHENTICATION_MODE=reject_all`) hasta configurar el JWT interno MarketTec
+descrito en [Autenticación JWT interna](#autenticación-jwt-interna). El contrato y la guía de MTEC-25 están
 en [`docs/MTEC-25_NOTIFICATIONS_API.md`](docs/MTEC-25_NOTIFICATIONS_API.md).
 
 Para ejecutar las pruebas:

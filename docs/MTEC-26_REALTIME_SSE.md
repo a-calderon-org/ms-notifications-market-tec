@@ -9,8 +9,8 @@ cliente web debe abrirlo mediante `fetch` con streaming para enviar el token en
 `Authorization`.
 
 Esta decisión es provisional hasta completar la prueba real con Angular, APIM y
-App Service prevista por MTEC-10/MTEC-12. El autenticador por defecto continúa
-rechazando todas las credenciales hasta integrar el contrato JWT aprobado.
+App Service. El autenticador por defecto continúa rechazando todas las
+credenciales hasta que App Service active `AUTHENTICATION_MODE=jwt` (MTEC-27).
 
 ## Comportamiento del servidor
 
@@ -74,7 +74,8 @@ SSE_MAX_CONNECTION_DURATION_SECONDS=300
 
 ## Verificación pendiente antes de Done
 
-1. Validar JWT real, expiración y renovación conforme a MTEC-10/MTEC-12.
+1. Validar JWT real de ms-users, expiración y renovación (contrato aprobado en
+   MTEC-12/MTEC-36).
 2. Comprobar que APIM y cualquier proxy no almacenen ni acumulen el stream.
 3. Ejecutar en navegador reconexión, `401`, `429`, cancelación e historial.
 4. Medir conexiones, duración, desconexiones, latencia y errores en Application

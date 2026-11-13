@@ -16,8 +16,11 @@ revisarse antes de crearlos en la suscripción Azure for Students.
   `App_Data/jobs/continuous/notifications-worker/run.py`.
 - Un WebJob continuo confiable requiere **Always On**, disponible desde Basic.
   Un plan B1 genera cobro mientras exista, incluso sin tráfico.
-- No configurar APIM/JWT hasta que el equipo cierre MTEC-12. No copiar una
-  subscription key o un token al repositorio ni al frontend.
+- MTEC-12 se cerró el 13-11-2026 solo para ms-users: ms-users emite el JWT
+  interno RS256, APIM lo valida con `validate-jwt` y cada backend lo revalida.
+  Ese cierre no certifica ms-notifications; su integración JWT/APIM se completa
+  en este ticket. No copiar una subscription key o un token al repositorio ni
+  al frontend.
 - El nivel APIM Consumption no admite SSE de larga duración. MTEC-26 debe
   conservarse separado hasta elegir un nivel compatible o transporte distinto.
 
@@ -126,8 +129,9 @@ No usar publish profile. El workflow `Deploy development` solo aparece como
 
 ## 5. APIM y acceso directo
 
-Esta etapa queda pendiente de MTEC-12 y no debe improvisarse desde este ticket.
-Cuando exista una decisión aprobada:
+MTEC-12 aprobó el patrón (JWT interno de ms-users, `validate-jwt` en APIM y
+revalidación en cada backend), pero su cierre no cubre este servicio. Para
+aplicarlo a ms-notifications:
 
 1. Importar `contracts/openapi/notifications.json`, publicado como OpenAPI
    `3.0.3` por compatibilidad con APIM, en una API independiente con sufijo
@@ -154,7 +158,7 @@ Guardar en el PR/Jira, sin secretos:
 - URL APIM y Web App censurada cuando corresponda, estado de health y fecha.
 - ID del run de CI/deploy, commit y versión Python.
 - Evidencia de Queue, poison, deduplicación y Application Insights.
-- Resultado de pruebas 401/403 y acceso directo cuando MTEC-12 lo permita.
+- Resultado de pruebas 401/403 y de acceso directo al hostname de App Service.
 
 Para revertir, volver a desplegar el último commit estable desde Actions. Si el
 servicio queda inestable, detener la Web App antes de alterar datos o colas. No
