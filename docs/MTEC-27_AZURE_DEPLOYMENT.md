@@ -73,6 +73,7 @@ Agregar en Environment variables, sin espacios adicionales:
 | `JWT_MAX_TTL_SECONDS` | `240` |
 | `JWT_JWKS_TIMEOUT_SECONDS` | `5` |
 | `JWT_JWKS_CACHE_SECONDS` | `300` |
+| `APIM_GATEWAY_KEY` | referencia Key Vault a `apim-gateway-key`; configurar **después** de aplicar la policy APIM ([infra/apim/README.md](../infra/apim/README.md)) |
 | `AZURE_STORAGE_QUEUE_ENDPOINT` | `https://stmtecnotifdevcc.queue.core.windows.net` |
 | `AZURE_QUEUE_NAME` | `message-sent-v1` |
 | `AZURE_POISON_QUEUE_NAME` | `message-sent-v1-poison` |
@@ -128,6 +129,9 @@ No usar publish profile. El workflow `Deploy development` solo aparece como
     `message-sent-v1-poison` sin secretos en logs.
 
 ## 5. APIM y acceso directo
+
+> La policy, la clave de gateway (`403 DIRECT_ACCESS_FORBIDDEN` en acceso directo)
+> y los comandos para aplicarlas están en [infra/apim/README.md](../infra/apim/README.md).
 
 MTEC-12 aprobó el patrón (JWT interno de ms-users, `validate-jwt` en APIM y
 revalidación en cada backend), pero su cierre no cubre este servicio. Para

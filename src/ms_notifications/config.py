@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     jwt_max_ttl_seconds: int = Field(default=240, ge=1, le=240)
     jwt_jwks_timeout_seconds: int = Field(default=5, ge=1, le=30)
     jwt_jwks_cache_seconds: int = Field(default=300, ge=1, le=3600)
+    # Shared secret that only APIM injects. Empty disables the direct-access gate.
+    apim_gateway_key: str = Field(default="", repr=False)
     notifications_repository: Literal["memory", "mongo"] = "memory"
     mongodb_uri: str = ""
     mongodb_database: str = "market_tec_notifications"

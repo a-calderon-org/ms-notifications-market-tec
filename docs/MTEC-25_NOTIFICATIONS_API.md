@@ -57,7 +57,8 @@ repositorio ni datos de otros usuarios.
 
 ## Postman y pruebas
 
-Importar `docs/postman/MTEC-25.postman_collection.json`. La colección no contiene
+Importar `docs/postman/ms-notifications.postman_collection.json` y un environment de
+`docs/postman/environments/` (ver [ENTREGABLES_FASE2.md](ENTREGABLES_FASE2.md)). La colección no contiene
 tokens. `bearerToken` debe permanecer vacío hasta disponer de un token legítimo
 del flujo aprobado; las pruebas automatizadas cubren actualmente todos los
 endpoints con un autenticador falso inyectado solo durante tests.
