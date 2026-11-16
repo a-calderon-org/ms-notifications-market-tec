@@ -2,10 +2,46 @@
   "openapi": "3.0.3",
   "info": {
     "title": "MarketTEC Notifications API",
-    "version": "0.3.0-draft",
-    "description": "Protected notification history, read-state and authenticated SSE API. Production authentication and APIM validation remain subject to MTEC-10, MTEC-12 and MTEC-15."
+    "version": "0.4.0-draft",
+    "description": "Protected notification history, read-state and authenticated SSE API, published only through Azure API Management (`markettec-api`, suffix `notifications`).\n\n**Security model**\n\n1. ms-users issues an internal RS256 access token (`typ: at+jwt`, TTL <= 240 s, claims `iss`, `aud`, `sub`, `sid`, `iat`, `exp`, `jti`).\n2. APIM (`infra/apim/notifications-api-policy.xml`) validates signature, issuer, audience, expiration and token profile, deletes client-supplied identity headers and injects the gateway key header `X-MTEC-Notifications-Gateway-Key` from a secret named value.\n3. The backend re-validates the JWT and rejects with `403 DIRECT_ACCESS_FORBIDDEN` any `/v1/*` request without the gateway key (direct App Service access).\n4. The recipient is always derived from `sub`; the client never sends a user id. Responses carry `Cache-Control: no-store` and `X-Correlation-ID`.\n\n`/health/*` is public and contains no user data. APIM Consumption does not support long-lived SSE; see docs/MTEC-26_REALTIME_SSE.md."
   },
+  "servers": [
+    {"url": "https://markettec-api.azure-api.net/notifications", "description": "Azure API Management (only supported public entry point)"},
+    {"url": "http://localhost:8000", "description": "Local development"}
+  ],
   "paths": {
+    "/health/live": {
+      "get": {
+        "operationId": "getLiveness",
+        "summary": "Liveness probe",
+        "tags": ["health"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Process is running",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Liveness"}}}
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "getReadiness",
+        "summary": "Readiness probe (repository connectivity)",
+        "tags": ["health"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Repository reachable",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Readiness"}}}
+          },
+          "503": {
+            "description": "Repository unavailable",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Readiness"}}}
+          }
+        }
+      }
+    },
     "/v1/notifications": {
       "get": {
         "operationId": "listNotifications",
@@ -92,7 +128,12 @@
   },
   "components": {
     "securitySchemes": {
-      "bearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Internal MarketTec access token issued by ms-users (RS256, typ at+jwt, aud markettec-api, TTL <= 240 s). Validated by APIM validate-jwt and again by the backend. Permissions: notifications:read, notifications:write."
+      }
     },
     "parameters": {
       "CorrelationId": {
@@ -111,6 +152,19 @@
       "CorrelationId": {"schema": {"type": "string"}}
     },
     "schemas": {
+      "Liveness": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {"status": {"type": "string", "enum": ["ok"]}}
+      },
+      "Readiness": {
+        "type": "object",
+        "required": ["status", "repository"],
+        "properties": {
+          "status": {"type": "string", "enum": ["ok", "unavailable"]},
+          "repository": {"type": "string"}
+        }
+      },
       "Notification": {
         "type": "object",
         "additionalProperties": false,

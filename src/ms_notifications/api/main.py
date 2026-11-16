@@ -1,3 +1,4 @@
+import hmac
 import re
 from contextlib import asynccontextmanager
 from typing import Any
@@ -35,6 +36,9 @@ def readiness(request: Request, response: Response) -> dict[str, Any]:
 
 
 CORRELATION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+GATEWAY_KEY_HEADER = "X-MTEC-Notifications-Gateway-Key"
+GATEWAY_EXEMPT_PREFIX = "/health/"
+MIN_GATEWAY_KEY_LENGTH = 32
 
 
 def _error_body(code: str, message: str, correlation_id: str) -> dict[str, Any]:
@@ -47,6 +51,9 @@ def create_app(
     authenticator: Authenticator | None = None,
 ) -> FastAPI:
     app_settings = settings or get_settings()
+    gateway_key = app_settings.apim_gateway_key.encode("utf-8")
+    if gateway_key and len(gateway_key) < MIN_GATEWAY_KEY_LENGTH:
+        raise ValueError("APIM_GATEWAY_KEY must contain at least 32 characters")
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
@@ -85,6 +92,18 @@ def create_app(
             )
         correlation_id = incoming or str(uuid4())
         request.state.correlation_id = correlation_id
+        if gateway_key and not request.url.path.startswith(GATEWAY_EXEMPT_PREFIX):
+            presented = request.headers.get(GATEWAY_KEY_HEADER, "").encode("utf-8")
+            if not hmac.compare_digest(presented, gateway_key):
+                return JSONResponse(
+                    status_code=403,
+                    content=_error_body(
+                        "DIRECT_ACCESS_FORBIDDEN",
+                        "Requests must be routed through the MarketTec API gateway",
+                        correlation_id,
+                    ),
+                    headers={"X-Correlation-ID": correlation_id},
+                )
         response = await call_next(request)
         response.headers["X-Correlation-ID"] = correlation_id
         return response

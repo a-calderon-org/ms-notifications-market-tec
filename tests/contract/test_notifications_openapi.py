@@ -12,7 +12,11 @@ def test_notifications_contract_is_valid_json_and_matches_routes():
     generated = create_app(Settings(notifications_repository="memory")).openapi()
 
     assert contract["openapi"] == "3.0.3"
-    assert contract["info"]["version"] == "0.3.0-draft"
+    assert contract["info"]["version"] == "0.4.0-draft"
+    assert contract["servers"][0]["url"] == "https://markettec-api.azure-api.net/notifications"
+    for path in ("/health/live", "/health/ready"):
+        assert path in generated["paths"]
+        assert contract["paths"][path]["get"]["security"] == []
     assert "/v1/notifications" in generated["paths"]
     assert "/v1/notifications/stream" in generated["paths"]
     assert "/v1/notifications/{notificationId}/read" in generated["paths"]

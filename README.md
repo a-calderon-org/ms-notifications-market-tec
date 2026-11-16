@@ -136,6 +136,16 @@ liberarla, usar `JWT_JWKS_JSON` con el mismo snapshot público revisado que util
 APIM y guardarlo en configuración externa; rotarlo de forma coordinada antes de
 retirar un `kid`.
 
+## APIM y acceso directo
+
+APIM valida el JWT y agrega el header `X-MTEC-Notifications-Gateway-Key`. Con
+`APIM_GATEWAY_KEY` configurada (32 caracteres o más), el backend responde
+`403 DIRECT_ACCESS_FORBIDDEN` a toda ruta excepto `/health/*` si falta esa clave.
+Si la variable está vacía, el bloqueo queda desactivado. La policy, los controles y
+los pasos para aplicarla están en [`infra/apim/README.md`](infra/apim/README.md). El
+mapa de entregables (APIM, almacenamiento y Postman) está en
+[`docs/ENTREGABLES_FASE2.md`](docs/ENTREGABLES_FASE2.md).
+
 ## Notificaciones web en tiempo real (MTEC-26)
 
 `GET /v1/notifications/stream` entrega SSE protegido con el principal y permiso

@@ -1,0 +1,57 @@
+<policies>
+  <inbound>
+    <base />
+    <set-header name="X-User-Id" exists-action="delete" />
+    <set-header name="X-Session-Id" exists-action="delete" />
+    <set-header name="X-Authenticated-User" exists-action="delete" />
+    <set-header name="X-MTEC-Authorization" exists-action="delete" />
+    <set-header name="X-MTEC-Google-Authorization" exists-action="delete" />
+    <set-header name="Cookie" exists-action="delete" />
+    <set-header name="X-CSRF-Token" exists-action="delete" />
+    <set-header name="X-MTEC-Notifications-Gateway-Key" exists-action="delete" />
+    <choose>
+      <when condition="@(context.Operation.Id != &quot;getLiveness&quot; &amp;&amp; context.Operation.Id != &quot;getReadiness&quot;)">
+        <validate-jwt header-name="Authorization" require-scheme="Bearer" require-signed-tokens="true" require-expiration-time="true" clock-skew="0" failed-validation-httpcode="401" failed-validation-error-message="Invalid internal token" output-token-variable-name="internalJwt">
+          <issuer-signing-keys>
+            <key id="prod-jwt-2026-11" n="zWRchdwQ4ufgRnF7-0dW1K7qw6YJdbib8AMtlTxhGMaM2ShxP21Lb9uRsP4UaJRuK2ASeY9xWekZA17mVd8gaXIkFASIHlJgUD7W3G82E_hGe322wSxc1diZEQIJJizjtflW8mG7o1x8fhxLhhwYk7kjpgJNsbq0KMt2UQt9xBWcBWfk2D6GLoT8h5CwRE_tlmCRlVHREsSph5QB0SX2nM29E7snsF8ENUq6Oe9sUh_hTpCTeMkyYyf0dz3ZO4B26Z0AgrEpXMoLYPLIj4Oq24dlHEp2v12_v9v_Jkuh4wwL9ncLrXboa66Wdj7hKfOfD4em3YyfzEArcaQ--xhSGw" e="AQAB" />
+          </issuer-signing-keys>
+          <audiences>
+            <audience>markettec-api</audience>
+          </audiences>
+          <issuers>
+            <issuer>https://markettec-api.azure-api.net/users-prod</issuer>
+          </issuers>
+        </validate-jwt>
+        <choose>
+          <when condition="@{ var jwt = (Jwt)context.Variables[&quot;internalJwt&quot;]; return jwt.Algorithm != &quot;RS256&quot; || jwt.Type != &quot;at+jwt&quot; || String.IsNullOrEmpty(jwt.Subject) || String.IsNullOrEmpty(jwt.Id) || !jwt.IssuedAt.HasValue || !jwt.ExpirationTime.HasValue || (jwt.ExpirationTime.Value - jwt.IssuedAt.Value).TotalSeconds &gt; 240 || !jwt.Claims.ContainsKey(&quot;sid&quot;) || jwt.Claims[&quot;sid&quot;].Length != 1 || String.IsNullOrEmpty(jwt.Claims[&quot;sid&quot;][0]); }">
+            <return-response>
+              <set-status code="401" reason="Unauthorized" />
+              <set-header name="Content-Type" exists-action="override">
+                <value>application/json</value>
+              </set-header>
+              <set-body>{"error":{"code":"INVALID_TOKEN","message":"Invalid internal token"}}</set-body>
+            </return-response>
+          </when>
+        </choose>
+      </when>
+    </choose>
+    <set-header name="X-MTEC-Notifications-Gateway-Key" exists-action="override">
+      <value>{{notifications-backend-key}}</value>
+    </set-header>
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+    <set-header name="Cache-Control" exists-action="override">
+      <value>no-store</value>
+    </set-header>
+    <set-header name="X-Content-Type-Options" exists-action="override">
+      <value>nosniff</value>
+    </set-header>
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>
